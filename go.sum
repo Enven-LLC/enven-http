@@ -6,6 +6,8 @@ github.com/bogdanfinn/tls-client v1.3.2 h1:ip0Lr0ZgQr2lJJ6hlFG+wUbO6lrsmLzIof7o/
 github.com/bogdanfinn/tls-client v1.3.2/go.mod h1:sXKGNtjCccEAoSmLC7UfcReS90axHRZvTDTuHPnBLTI=
 github.com/bogdanfinn/utls v1.5.15 h1:XUUMJZh2AptaouuwUrc/RQOYgyV89rstC5Nj3FSP43s=
 github.com/bogdanfinn/utls v1.5.15/go.mod h1:mHeRCi69cUiEyVBkKONB1cAbLjRcZnlJbGzttmiuK4o=
+github.com/bogdanfinn/utls v1.5.16 h1:NhhWkegEcYETBMj9nvgO4lwvc6NcLH+znrXzO3gnw4M=
+github.com/bogdanfinn/utls v1.5.16/go.mod h1:mHeRCi69cUiEyVBkKONB1cAbLjRcZnlJbGzttmiuK4o=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
