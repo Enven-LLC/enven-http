@@ -5,13 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	http "github.com/bogdanfinn/fhttp"
-	"github.com/bogdanfinn/fhttp/httputil"
 	"golang.org/x/net/proxy"
 )
 
@@ -20,25 +18,23 @@ var defaultRedirectFunc = func(req *http.Request, via []*http.Request) error {
 }
 
 type HttpClient interface {
-	GetCookies(u *url.URL) []*http.Cookie
-	SetCookies(u *url.URL, cookies []*http.Cookie)
+	// GetCookies(u *url.URL) []*http.Cookie
+	// SetCookies(u *url.URL, cookies []*http.Cookie)
 	SetCookieJar(jar http.CookieJar)
-	GetCookieJar() http.CookieJar
+	// GetCookieJar() http.CookieJar
 	SetProxy(proxyUrl string) error
 	GetProxy() string
 	SetFollowRedirect(followRedirect bool)
 	GetFollowRedirect() bool
 	CloseIdleConnections()
-	Do(req *http.Request) (*http.Response, error)
-	Get(url string) (resp *http.Response, err error)
-	Head(url string) (resp *http.Response, err error)
-	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
+	Do(req *WebReq) (*WebResp, error)
 }
 
 // Interface guards are a cheap way to make sure all methods are implemented, this is a static check and does not affect runtime performance.
-var _ HttpClient = (*httpClient)(nil)
-
+// var _ HttpClient = (*httpClient)(nil)
+// todo
 type httpClient struct {
+	BJar *BetterJar
 	http.Client
 	headerLck sync.Mutex
 	logger    Logger
@@ -52,12 +48,6 @@ var DefaultOptions = []HttpClientOption{
 	WithClientProfile(DefaultClientProfile),
 	WithRandomTLSExtensionOrder(),
 	WithNotFollowRedirects(),
-}
-
-func ProvideDefaultClient(logger Logger) (HttpClient, error) {
-	jar := NewCookieJar()
-
-	return NewHttpClient(logger, append(DefaultOptions, WithCookieJar(jar))...)
 }
 
 // NewHttpClient constructs a new HTTP client with the given logger and client options.
@@ -97,12 +87,16 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 		logger = NewNoopLogger()
 	}
 
-	return &httpClient{
-		Client:    *client,
-		logger:    logger,
-		config:    config,
-		headerLck: sync.Mutex{},
-	}, nil
+	c := &httpClient{
+		Client: *client,
+		logger: logger,
+		config: config,
+	}
+	if config.betterJar != nil {
+		c.BJar = config.betterJar
+	}
+
+	return c, nil
 }
 
 func validateConfig(_ *httpClientConfig) error {
@@ -149,7 +143,6 @@ func buildFromConfig(config *httpClientConfig) (*http.Client, ClientProfile, err
 	if config.cookieJar != nil {
 		client.Jar = config.cookieJar
 	}
-
 	return client, clientProfile, nil
 }
 
@@ -229,152 +222,159 @@ func (c *httpClient) applyProxy() error {
 }
 
 // GetCookies returns the cookies in the client's cookie jar for a given URL.
-func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
-	c.logger.Info(fmt.Sprintf("get cookies for url: %s", u.String()))
-	if c.Jar == nil {
-		c.logger.Warn("you did not setup a cookie jar")
-		return nil
-	}
+// func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
+// 	c.logger.Info(fmt.Sprintf("get cookies for url: %s", u.String()))
+// 	if c.Jar == nil {
+// 		c.logger.Warn("you did not setup a cookie jar")
+// 		return nil
+// 	}
 
-	return c.Jar.Cookies(u)
-}
+// 	return c.Jar.Cookies(u)
+// }
 
-// SetCookies sets a list of cookies for a given URL in the client's cookie jar.
-func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	c.logger.Info(fmt.Sprintf("set cookies for url: %s", u.String()))
+// // SetCookies sets a list of cookies for a given URL in the client's cookie jar.
+// func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
+// 	c.logger.Info(fmt.Sprintf("set cookies for url: %s", u.String()))
 
-	if c.Jar == nil {
-		c.logger.Warn("you did not setup a cookie jar")
-		return
-	}
+// 	if c.Jar == nil {
+// 		c.logger.Warn("you did not setup a cookie jar")
+// 		return
+// 	}
 
-	c.Jar.SetCookies(u, cookies)
-}
+// 	c.Jar.SetCookies(u, cookies)
+// }
 
 // SetCookieJar sets a jar as the clients cookie jar. This is the recommended way when you want to "clear" the existing cookiejar
 func (c *httpClient) SetCookieJar(jar http.CookieJar) {
 	c.Jar = jar
 }
 
-// GetCookieJar returns the jar the client is currently using
-func (c *httpClient) GetCookieJar() http.CookieJar {
-	return c.Jar
-}
-
-// Do issues a given HTTP request and returns the corresponding response.
-//
-// If the returned error is nil, the response contains a non-nil body, which the user is expected to close.
-func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
-	if c.config.catchPanics {
-		defer func() {
-			err := recover()
-
-			if err != nil && c.config.debug {
-				c.logger.Debug(fmt.Sprintf("panic occurred in tls client request handling: %s", err))
-			}
-
-			if err != nil && !c.config.debug {
-				c.logger.Info("critical error during request handling")
-			}
-		}()
-	}
-
+func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	// Header order must be defined in all lowercase. On HTTP 1 people sometimes define them also in uppercase and then ordering does not work.
 	c.headerLck.Lock()
 	req.Header[http.HeaderOrderKey] = allToLower(req.Header[http.HeaderOrderKey])
 	c.headerLck.Unlock()
 
-	if c.config.debug {
-		debugReq := req.Clone(context.Background())
-
-		if req.Body != nil {
-			buf, err := io.ReadAll(req.Body)
-			if err != nil {
-				return nil, err
-			}
-
-			debugBody := io.NopCloser(bytes.NewBuffer(buf))
-			requestBody := io.NopCloser(bytes.NewBuffer(buf))
-
-			c.logger.Debug("request body payload: %s", string(buf))
-
-			debugReq.Body = debugBody
-			req.Body = requestBody
-		}
-
-		requestBytes, err := httputil.DumpRequestOut(debugReq, debugReq.ContentLength > 0)
-		if err != nil {
-			return nil, err
-		}
-
-		c.logger.Debug("raw request bytes sent over wire: %d (%d kb)", len(requestBytes), len(requestBytes)/1024)
+	reqq := &http.Request{
+		Method:           req.Method,
+		URL:              req.URL,
+		Proto:            req.Proto,
+		ProtoMajor:       req.ProtoMajor,
+		ProtoMinor:       req.ProtoMinor,
+		Header:           req.Header,
+		Body:             req.Body,
+		ContentLength:    req.ContentLength,
+		TransferEncoding: req.TransferEncoding,
+		Close:            req.Close,
+		Host:             req.Host,
+		Form:             req.Form,
+		PostForm:         req.PostForm,
+		MultipartForm:    req.MultipartForm,
+		Trailer:          req.Trailer,
+		RemoteAddr:       req.RemoteAddr,
+		RequestURI:       req.RequestURI,
+		TLS:              req.TLS,
+		Cancel:           req.Cancel,
+		Response:         req.Response,
 	}
 
-	resp, err := c.Client.Do(req)
+	resp, err := c.Client.Do(reqq)
+
 	if err != nil {
 		c.logger.Debug("failed to do request: %s", err.Error())
-		return nil, err
+		return &WebResp{StatusCode: -1}, err
 	}
 
-	c.logger.Debug("headers on request:\n%v", req.Header)
-	c.logger.Debug("cookies on request:\n%v", resp.Request.Cookies())
-	c.logger.Debug("headers on response:\n%v", resp.Header)
-	c.logger.Debug("cookies on response:\n%v", resp.Cookies())
 	c.logger.Debug("requested %s : status %d", req.URL.String(), resp.StatusCode)
 
-	if c.config.debug {
-		responseBytes, err := httputil.DumpResponse(resp, resp.ContentLength > 0)
-		if err != nil {
-			return nil, err
-		}
+	webResp := &WebResp{
+		Status:        resp.Status,
+		StatusCode:    resp.StatusCode,
+		Proto:         resp.Proto,
+		ProtoMajor:    resp.ProtoMajor,
+		ProtoMinor:    resp.ProtoMinor,
+		Header:        resp.Header,
+		ContentLength: resp.ContentLength,
+		Close:         resp.Close,
+		Uncompressed:  resp.Uncompressed,
+		Trailer:       resp.Trailer,
+		Request:       resp.Request, // ? should this be reqq
+		TLS:           resp.TLS,
+	}
 
-		if resp.Body != nil {
+	// c.processCookies(webResp)
+
+	if c.Jar != nil {
+		cookies := c.Jar.Cookies(reqq.URL)
+		cookieStr := ""
+		for _, cook := range cookies {
+			c.logger.Debug("cookie: %s", cook.String())
+
+			if cook.Name != "" && cook.Value != "" && cook.Value != `""` && cook.Value != "undefined" {
+				cookieStr += cook.Name + "=" + cook.Value + "; "
+			}
+		}
+		webResp.Cookies = strings.TrimSuffix(cookieStr, "; ")
+	} else if c.BJar != nil {
+		// * Use better jar
+		c.processCookies(webResp)
+	}
+
+	if resp.Body != nil {
+		if !req.NoDecodeBody {
 			buf, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return nil, err
 			}
-			defer resp.Body.Close()
-
 			responseBody := io.NopCloser(bytes.NewBuffer(buf))
-
-			c.logger.Debug("response body payload: %s", string(buf))
-
 			resp.Body = responseBody
+			webResp.Body = string(buf)
 		}
-
-		c.logger.Debug("raw response bytes received over wire: %d (%d kb)", len(responseBytes), len(responseBytes)/1024)
+		resp.Body.Close()
 	}
 
-	return resp, nil
+	// if !req.NoDecodeBody {
+	// 	// defer resp.Body.Close()
+	// 	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
+	// 	if err2 != nil {
+	// 		return &WebResp{StatusCode: -1}, err2
+	// 	}
+	// 	webResp.BodyBytes = bodyBytes
+	// 	webResp.Body = string(webResp.BodyBytes)
+	// }
+	// resp.Body.Close()
+	return webResp, nil
 }
 
-func (c *httpClient) Get(url string) (resp *http.Response, err error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+// NewRequest wraps NewRequestWithContext using the background context.
+func NewRequest(method, url string, body io.Reader) (*WebReq, error) {
+	req, err := http.NewRequestWithContext(context.Background(), method, url, body)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.Do(req)
-}
-
-func (c *httpClient) Head(url string) (resp *http.Response, err error) {
-	req, err := http.NewRequest(http.MethodHead, url, nil)
-	if err != nil {
-		return nil, err
+	webReq := &WebReq{
+		Method:        req.Method,
+		URL:           req.URL,
+		Proto:         req.Proto,
+		ProtoMajor:    req.ProtoMajor,
+		ProtoMinor:    req.ProtoMinor,
+		Header:        req.Header,
+		Body:          req.Body,
+		ContentLength: req.ContentLength,
+		Close:         req.Close,
+		Host:          req.Host,
+		Form:          req.Form,
+		PostForm:      req.PostForm,
+		MultipartForm: req.MultipartForm,
+		Trailer:       req.Trailer,
+		RemoteAddr:    req.RemoteAddr,
+		RequestURI:    req.RequestURI,
+		TLS:           req.TLS,
+		Response:      req.Response,
 	}
 
-	return c.Do(req)
-}
-
-func (c *httpClient) Post(url, contentType string, body io.Reader) (resp *http.Response, err error) {
-	req, err := http.NewRequest(http.MethodPost, url, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", contentType)
-
-	return c.Do(req)
+	return webReq, nil
 }
 
 func allToLower(list []string) []string {
