@@ -281,11 +281,8 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	resp, err := c.Client.Do(reqq)
 
 	if err != nil {
-		c.logger.Debug("failed to do request: %s", err.Error())
 		return &WebResp{StatusCode: -1}, err
 	}
-
-	c.logger.Debug("requested %s : status %d", req.URL.String(), resp.StatusCode)
 
 	webResp := &WebResp{
 		Status:        resp.Status,
@@ -321,28 +318,16 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	}
 
 	if resp.Body != nil {
-		if !req.NoDecodeBody {
-			buf, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, err
-			}
-			responseBody := io.NopCloser(bytes.NewBuffer(buf))
-			resp.Body = responseBody
-			webResp.Body = string(buf)
+		buf, err := io.ReadAll(resp.Body)
+		if err != nil {
+			resp.Body.Close()
+			return nil, err
 		}
+		responseBody := io.NopCloser(bytes.NewBuffer(buf))
+		resp.Body = responseBody
+		webResp.Body = string(buf)
 		resp.Body.Close()
 	}
-
-	// if !req.NoDecodeBody {
-	// 	// defer resp.Body.Close()
-	// 	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
-	// 	if err2 != nil {
-	// 		return &WebResp{StatusCode: -1}, err2
-	// 	}
-	// 	webResp.BodyBytes = bodyBytes
-	// 	webResp.Body = string(webResp.BodyBytes)
-	// }
-	// resp.Body.Close()
 	return webResp, nil
 }
 

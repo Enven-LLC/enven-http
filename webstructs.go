@@ -12,7 +12,7 @@ import (
 )
 
 type WebReq struct {
-	NoDecodeBody bool
+	// NoDecodeBody bool
 	// Method specifies the HTTP method (GET, POST, PUT, etc.).
 	// For client requests, an empty string means GET.
 	//
