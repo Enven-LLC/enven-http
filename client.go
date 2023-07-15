@@ -31,8 +31,8 @@ type HttpClient interface {
 }
 
 // Interface guards are a cheap way to make sure all methods are implemented, this is a static check and does not affect runtime performance.
-// var _ HttpClient = (*httpClient)(nil)
-// todo
+var _ HttpClient = (*httpClient)(nil)
+
 type httpClient struct {
 	BJar *BetterJar
 	http.Client
