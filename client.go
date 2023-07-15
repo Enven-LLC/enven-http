@@ -323,7 +323,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	}
 
 	if !req.NoDecodeBody {
-		defer resp.Body.Close()
+		// defer resp.Body.Close()
 		bodyBytes, err2 := ioutil.ReadAll(resp.Body)
 		if err2 != nil {
 			return &WebResp{StatusCode: -1}, err2
@@ -331,7 +331,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		webResp.BodyBytes = bodyBytes
 		webResp.Body = string(webResp.BodyBytes)
 	}
-
+	resp.Body.Close()
 	return webResp, nil
 }
 
