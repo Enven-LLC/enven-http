@@ -23,12 +23,9 @@ type directDialer struct {
 	dialer net.Dialer
 }
 
-func newDirectDialer(timeout time.Duration, localAddr *net.TCPAddr) proxy.ContextDialer {
+func newDirectDialer(timeout time.Duration) proxy.ContextDialer {
 	_dialer := net.Dialer{
 		Timeout: timeout,
-	}
-	if nil != localAddr {
-		_dialer.LocalAddr = localAddr
 	}
 
 	return &directDialer{
@@ -94,7 +91,7 @@ type connectDialer struct {
 // newConnectDialer creates a dialer to issue CONNECT requests and tunnel traffic via HTTP/S proxy.
 // proxyUrlStr must provide Scheme and Host, may provide credentials and port.
 // Example: https://username:password@golang.org:443
-func newConnectDialer(proxyUrlStr string, timeout time.Duration, localAddr *net.TCPAddr) (proxy.ContextDialer, error) {
+func newConnectDialer(proxyUrlStr string, timeout time.Duration) (proxy.ContextDialer, error) {
 	proxyUrl, err := url.Parse(proxyUrlStr)
 	if err != nil {
 		return nil, err
@@ -114,8 +111,6 @@ func newConnectDialer(proxyUrlStr string, timeout time.Duration, localAddr *net.
 		if proxyUrl.Port() == "" {
 			proxyUrl.Host = net.JoinHostPort(proxyUrl.Host, "443")
 		}
-	case "socks5":
-		return handleSocks5ProxyDialer(proxyUrl, localAddr)
 	case "":
 		return nil, errors.New("specify scheme explicitly (https://)")
 	default:
@@ -123,9 +118,6 @@ func newConnectDialer(proxyUrlStr string, timeout time.Duration, localAddr *net.
 	}
 	_dialer := net.Dialer{
 		Timeout: timeout,
-	}
-	if nil != localAddr {
-		_dialer.LocalAddr = localAddr
 	}
 
 	dialer := &connectDialer{
