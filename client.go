@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -18,10 +19,10 @@ var defaultRedirectFunc = func(req *http.Request, via []*http.Request) error {
 }
 
 type HttpClient interface {
-	// GetCookies(u *url.URL) []*http.Cookie
-	// SetCookies(u *url.URL, cookies []*http.Cookie)
+	GetCookies(u *url.URL) []*http.Cookie
+	SetCookies(u *url.URL, cookies []*http.Cookie)
 	SetCookieJar(jar http.CookieJar)
-	// GetCookieJar() http.CookieJar
+	GetCookieJar() http.CookieJar
 	SetProxy(proxyUrl string) error
 	GetProxy() string
 	SetFollowRedirect(followRedirect bool)
@@ -222,33 +223,32 @@ func (c *httpClient) applyProxy() error {
 }
 
 // GetCookies returns the cookies in the client's cookie jar for a given URL.
-// func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
-// 	c.logger.Info(fmt.Sprintf("get cookies for url: %s", u.String()))
-// 	if c.Jar == nil {
-// 		c.logger.Warn("you did not setup a cookie jar")
-// 		return nil
-// 	}
+func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
+	if c.Jar == nil {
+		c.logger.Warn("you did not setup a cookie jar")
+		return nil
+	}
 
-// 	return c.Jar.Cookies(u)
-// }
+	return c.Jar.Cookies(u)
+}
 
-// // SetCookies sets a list of cookies for a given URL in the client's cookie jar.
-// func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
-// 	c.logger.Info(fmt.Sprintf("set cookies for url: %s", u.String()))
+func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
 
-// 	if c.Jar == nil {
-// 		c.logger.Warn("you did not setup a cookie jar")
-// 		return
-// 	}
+	if c.Jar == nil {
+		c.logger.Warn("you did not setup a cookie jar")
+		return
+	}
 
-// 	c.Jar.SetCookies(u, cookies)
-// }
+	c.Jar.SetCookies(u, cookies)
+}
 
 // SetCookieJar sets a jar as the clients cookie jar. This is the recommended way when you want to "clear" the existing cookiejar
 func (c *httpClient) SetCookieJar(jar http.CookieJar) {
 	c.Jar = jar
 }
-
+func (c *httpClient) GetCookieJar() http.CookieJar {
+	return c.Jar
+}
 func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	// Header order must be defined in all lowercase. On HTTP 1 people sometimes define them also in uppercase and then ordering does not work.
 	c.headerLck.Lock()
@@ -326,6 +326,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		responseBody := io.NopCloser(bytes.NewBuffer(buf))
 		resp.Body = responseBody
 		webResp.Body = string(buf)
+		webResp.BodyBytes = buf
 		resp.Body.Close()
 	}
 	return webResp, nil

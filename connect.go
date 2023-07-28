@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -39,20 +38,6 @@ func (d *directDialer) Dial(network, addr string) (net.Conn, error) {
 
 func (d *directDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	return d.dialer.DialContext(ctx, network, addr)
-}
-
-type socksContextDialer struct {
-	socksDialer proxy.Dialer
-}
-
-func newSocksContextDialer(socksDialer proxy.Dialer) socksContextDialer {
-	return socksContextDialer{
-		socksDialer: socksDialer,
-	}
-}
-
-func (s *socksContextDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return s.socksDialer.Dial(network, address)
 }
 
 // Copyright 2018 Google Inc.
@@ -136,33 +121,6 @@ func newConnectDialer(proxyUrlStr string, timeout time.Duration) (proxy.ContextD
 		}
 	}
 	return dialer, nil
-}
-
-func handleSocks5ProxyDialer(proxyUrl *url.URL, localAddr *net.TCPAddr) (proxy.ContextDialer, error) {
-	var proxyAuth *proxy.Auth
-	if proxyUrl.User != nil {
-		password, _ := proxyUrl.User.Password()
-		proxyAuth = &proxy.Auth{
-			User:     proxyUrl.User.Username(),
-			Password: password,
-		}
-	} else {
-		proxyAuth = nil
-	}
-	_dialer := proxy.Dialer(proxy.Direct)
-	if nil != localAddr {
-		_dialer = &net.Dialer{
-			LocalAddr: localAddr,
-		}
-	}
-	socksDialer, err := proxy.SOCKS5("tcp", proxyUrl.Host, proxyAuth, _dialer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create socks5 proxy: %w", err)
-	}
-
-	scd := newSocksContextDialer(socksDialer)
-
-	return &scd, nil
 }
 
 func (c *connectDialer) Dial(network, address string) (net.Conn, error) {
