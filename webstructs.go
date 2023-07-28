@@ -245,7 +245,8 @@ type WebResp struct {
 	ProtoMajor int    // e.g. 1
 	ProtoMinor int    // e.g. 0
 
-	Cookies string
+	Cookies  string
+	Cookies2 []*http.Cookie
 	// Header maps header keys to Values. If the response had multiple
 	// headers with the same Key, they may be concatenated, with comma
 	// delimiters.  (RFC 7230, section 3.2.2 requires that multiple headers

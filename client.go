@@ -297,6 +297,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Trailer:       resp.Trailer,
 		Request:       resp.Request, // ? should this be reqq
 		TLS:           resp.TLS,
+		Cookies2:      resp.Cookies(),
 	}
 
 	// c.processCookies(webResp)
