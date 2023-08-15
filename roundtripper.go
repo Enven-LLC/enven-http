@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	http "github.com/bogdanfinn/fhttp"
-	"github.com/bogdanfinn/fhttp/http2"
+	http "github.com/Enven-LLC/fhttp"
+	"github.com/Enven-LLC/fhttp/http2"
 	tls "github.com/bogdanfinn/utls"
 	"golang.org/x/net/proxy"
 )

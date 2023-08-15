@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	http "github.com/bogdanfinn/fhttp"
+	http "github.com/Enven-LLC/fhttp"
 	"golang.org/x/net/proxy"
 
-	"github.com/bogdanfinn/fhttp/http2"
+	"github.com/Enven-LLC/fhttp/http2"
 )
 
 type directDialer struct {

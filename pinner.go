@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	http "github.com/bogdanfinn/fhttp"
+	http "github.com/Enven-LLC/fhttp"
 	tls "github.com/bogdanfinn/utls"
 	"github.com/tam7t/hpkp"
 )

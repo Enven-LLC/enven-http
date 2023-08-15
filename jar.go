@@ -6,8 +6,8 @@ package tls_client
 // 	"strings"
 // 	"sync"
 
-// 	http "github.com/bogdanfinn/fhttp"
-// 	"github.com/bogdanfinn/fhttp/cookiejar"
+// 	http "github.com/Enven-LLC/fhttp"
+// 	"github.com/Enven-LLC/fhttp/cookiejar"
 // )
 
 // type CookieJarOption func(config *cookieJarConfig)

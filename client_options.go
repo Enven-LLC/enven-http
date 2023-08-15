@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"time"
 
-	http "github.com/bogdanfinn/fhttp"
+	http "github.com/Enven-LLC/fhttp"
 )
 
 type HttpClientOption func(config *httpClientConfig)
