@@ -1,12 +1,13 @@
 package tls_client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"math/rand"
+	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	http "github.com/bogdanfinn/fhttp"
@@ -18,21 +19,27 @@ var defaultRedirectFunc = func(req *http.Request, via []*http.Request) error {
 }
 
 type HttpClient interface {
-	// GetCookies(u *url.URL) []*http.Cookie
-	// SetCookies(u *url.URL, cookies []*http.Cookie)
+	GetCookies(u *url.URL) []*http.Cookie
+	SetCookies(u *url.URL, cookies []*http.Cookie)
 	SetCookieJar(jar http.CookieJar)
+	GetCookieJar() http.CookieJar
 	SetProxy(proxyUrl string) error
 	GetProxy() string
 	SetFollowRedirect(followRedirect bool)
 	GetFollowRedirect() bool
+	CloseIdleConnections()
 	Do(req *WebReq) (*WebResp, error)
 }
+
+// Interface guards are a cheap way to make sure all methods are implemented, this is a static check and does not affect runtime performance.
+var _ HttpClient = (*httpClient)(nil)
 
 type httpClient struct {
 	BJar *BetterJar
 	http.Client
-	logger Logger
-	config *httpClientConfig
+	headerLck sync.Mutex
+	logger    Logger
+	config    *httpClientConfig
 }
 
 var DefaultTimeoutSeconds = 30
@@ -44,19 +51,13 @@ var DefaultOptions = []HttpClientOption{
 	WithNotFollowRedirects(),
 }
 
-func ProvideDefaultClient(logger Logger) (HttpClient, error) {
-	// jar := NewCookieJar()
-
-	// return NewHttpClient(logger, append(DefaultOptions, WithCookieJar(jar))...)
-	return NewHttpClient(logger, DefaultOptions...)
-}
-
 // NewHttpClient constructs a new HTTP client with the given logger and client options.
 func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, error) {
 	config := &httpClientConfig{
 		followRedirects:    true,
 		badPinHandler:      nil,
 		customRedirectFunc: nil,
+		clientProfile:      DefaultClientProfile,
 		timeout:            time.Duration(DefaultTimeoutSeconds) * time.Second,
 	}
 
@@ -64,18 +65,11 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 		opt(config)
 	}
 
-	err := validateConfig(config)
-
-	if err != nil {
+	if err := validateConfig(config); err != nil {
 		return nil, err
 	}
 
-	if config.withRandomTlsExtensionOrder {
-		rand.Seed(time.Now().UnixNano())
-	}
-
 	client, clientProfile, err := buildFromConfig(config)
-
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +100,7 @@ func NewHttpClient(logger Logger, options ...HttpClientOption) (HttpClient, erro
 	return c, nil
 }
 
-func validateConfig(config *httpClientConfig) error {
+func validateConfig(_ *httpClientConfig) error {
 	return nil
 }
 
@@ -136,8 +130,7 @@ func buildFromConfig(config *httpClientConfig) (*http.Client, ClientProfile, err
 
 	clientProfile := config.clientProfile
 
-	transport, err := newRoundTripper(clientProfile, config.transportOptions, config.serverNameOverwrite, config.insecureSkipVerify, config.withRandomTlsExtensionOrder, config.forceHttp1, config.certificatePins, config.badPinHandler, dialer)
-
+	transport, err := newRoundTripper(clientProfile, config.transportOptions, config.serverNameOverwrite, config.insecureSkipVerify, config.withRandomTlsExtensionOrder, config.forceHttp1, config.certificatePins, config.badPinHandler, config.disableIPV6, dialer)
 	if err != nil {
 		return nil, clientProfile, err
 	}
@@ -154,6 +147,11 @@ func buildFromConfig(config *httpClientConfig) (*http.Client, ClientProfile, err
 	return client, clientProfile, nil
 }
 
+// CloseIdleConnections closes all idle connections of the underlying http client.
+func (c *httpClient) CloseIdleConnections() {
+	c.Client.CloseIdleConnections()
+}
+
 // SetFollowRedirect configures the client's HTTP redirect following policy.
 func (c *httpClient) SetFollowRedirect(followRedirect bool) {
 	c.logger.Debug("set follow redirect from %v to %v", c.config.followRedirects, followRedirect)
@@ -162,7 +160,7 @@ func (c *httpClient) SetFollowRedirect(followRedirect bool) {
 	c.applyFollowRedirect()
 }
 
-// GetFollowredirect returns the client's HTTP redirect following policy.
+// GetFollowRedirect returns the client's HTTP redirect following policy.
 func (c *httpClient) GetFollowRedirect() bool {
 	return c.config.followRedirects
 }
@@ -214,8 +212,7 @@ func (c *httpClient) applyProxy() error {
 		dialer = proxyDialer
 	}
 
-	transport, err := newRoundTripper(c.config.clientProfile, c.config.transportOptions, c.config.serverNameOverwrite, c.config.insecureSkipVerify, c.config.withRandomTlsExtensionOrder, c.config.forceHttp1, c.config.certificatePins, c.config.badPinHandler, dialer)
-
+	transport, err := newRoundTripper(c.config.clientProfile, c.config.transportOptions, c.config.serverNameOverwrite, c.config.insecureSkipVerify, c.config.withRandomTlsExtensionOrder, c.config.forceHttp1, c.config.certificatePins, c.config.badPinHandler, c.config.disableIPV6, dialer)
 	if err != nil {
 		return err
 	}
@@ -226,36 +223,37 @@ func (c *httpClient) applyProxy() error {
 }
 
 // GetCookies returns the cookies in the client's cookie jar for a given URL.
-// func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
-// 	c.logger.Info(fmt.Sprintf("get cookies for url: %s", u.String()))
-// 	if c.Jar == nil {
-// 		c.logger.Warn("you did not setup a cookie jar")
-// 		return nil
-// 	}
+func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
+	if c.Jar == nil {
+		c.logger.Warn("you did not setup a cookie jar")
+		return nil
+	}
 
-// 	return c.Jar.Cookies(u)
-// }
+	return c.Jar.Cookies(u)
+}
 
-// // SetCookies sets a list of cookies for a given URL in the client's cookie jar.
-// func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
-// 	c.logger.Info(fmt.Sprintf("set cookies for url: %s", u.String()))
+func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
 
-// 	if c.Jar == nil {
-// 		c.logger.Warn("you did not setup a cookie jar")
-// 		return
-// 	}
+	if c.Jar == nil {
+		c.logger.Warn("you did not setup a cookie jar")
+		return
+	}
 
-// 	c.Jar.SetCookies(u, cookies)
-// }
+	c.Jar.SetCookies(u, cookies)
+}
 
 // SetCookieJar sets a jar as the clients cookie jar. This is the recommended way when you want to "clear" the existing cookiejar
 func (c *httpClient) SetCookieJar(jar http.CookieJar) {
 	c.Jar = jar
 }
-
+func (c *httpClient) GetCookieJar() http.CookieJar {
+	return c.Jar
+}
 func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	// Header order must be defined in all lowercase. On HTTP 1 people sometimes define them also in uppercase and then ordering does not work.
+	c.headerLck.Lock()
 	req.Header[http.HeaderOrderKey] = allToLower(req.Header[http.HeaderOrderKey])
+	c.headerLck.Unlock()
 
 	reqq := &http.Request{
 		Method:           req.Method,
@@ -283,11 +281,8 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	resp, err := c.Client.Do(reqq)
 
 	if err != nil {
-		c.logger.Debug("failed to do request: %s", err.Error())
 		return &WebResp{StatusCode: -1}, err
 	}
-
-	c.logger.Debug("requested %s : status %d", req.URL.String(), resp.StatusCode)
 
 	webResp := &WebResp{
 		Status:        resp.Status,
@@ -302,6 +297,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Trailer:       resp.Trailer,
 		Request:       resp.Request, // ? should this be reqq
 		TLS:           resp.TLS,
+		Cookies2:      resp.Cookies(),
 	}
 
 	// c.processCookies(webResp)
@@ -322,16 +318,18 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		c.processCookies(webResp)
 	}
 
-	if !req.NoDecodeBody {
-		defer resp.Body.Close()
-		bodyBytes, err2 := ioutil.ReadAll(resp.Body)
-		if err2 != nil {
-			return &WebResp{StatusCode: -1}, err2
+	if resp.Body != nil {
+		buf, err := io.ReadAll(resp.Body)
+		if err != nil {
+			resp.Body.Close()
+			return nil, err
 		}
-		webResp.BodyBytes = bodyBytes
-		webResp.Body = string(webResp.BodyBytes)
+		responseBody := io.NopCloser(bytes.NewBuffer(buf))
+		resp.Body = responseBody
+		webResp.Body = string(buf)
+		webResp.BodyBytes = buf
+		resp.Body.Close()
 	}
-
 	return webResp, nil
 }
 
@@ -366,67 +364,11 @@ func NewRequest(method, url string, body io.Reader) (*WebReq, error) {
 	return webReq, nil
 }
 
-// Do issues a given HTTP request and returns the corresponding response.
-//
-// If the returned error is nil, the response contains a non-nil body, which the user is expected to close.
-// func (c *httpClient) Do(req *http.Request) (*http.Response, error) {
-// 	// Header order must be defined in all lowercase. On HTTP 1 people sometimes define them also in uppercase and then ordering does not work.
-// 	req.Header[http.HeaderOrderKey] = allToLower(req.Header[http.HeaderOrderKey])
-
-// 	if c.config.debug {
-// 		debugReq := req.Clone(context.Background())
-
-// 		if req.Body != nil {
-// 			buf, err := ioutil.ReadAll(req.Body)
-
-// 			if err != nil {
-// 				return nil, err
-// 			}
-
-// 			debugBody := ioutil.NopCloser(bytes.NewBuffer(buf))
-// 			requestBody := ioutil.NopCloser(bytes.NewBuffer(buf))
-
-// 			debugReq.Body = debugBody
-// 			req.Body = requestBody
-// 		}
-
-// 		requestBytes, err := httputil.DumpRequestOut(debugReq, debugReq.ContentLength > 0)
-
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		c.logger.Debug("raw request bytes sent over wire: %d (%d kb)", len(requestBytes), len(requestBytes)/1024)
-// 	}
-
-// 	resp, err := c.Client.Do(req)
-
-// 	if err != nil {
-// 		c.logger.Debug("failed to do request: %s", err.Error())
-// 		return nil, err
-// 	}
-
-// 	c.logger.Debug("cookies on request: %v", resp.Request.Cookies())
-// 	c.logger.Debug("requested %s : status %d", req.URL.String(), resp.StatusCode)
-
-// 	if c.config.debug {
-// 		responseBytes, err := httputil.DumpResponse(resp, resp.ContentLength > 0)
-
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		c.logger.Debug("raw response bytes received over wire: %d (%d kb)", len(responseBytes), len(responseBytes)/1024)
-// 	}
-
-// 	return resp, nil
-// }
-
 func allToLower(list []string) []string {
-	var lower []string
+	lower := make([]string, len(list))
 
-	for _, elem := range list {
-		lower = append(lower, strings.ToLower(elem))
+	for i, elem := range list {
+		lower[i] = strings.ToLower(elem)
 	}
 
 	return lower

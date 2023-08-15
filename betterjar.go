@@ -26,7 +26,6 @@ func NewBetterJar() *BetterJar {
 
 func (c *httpClient) processCookies(resp *WebResp) {
 	c.BJar.Lock()
-	defer c.BJar.Unlock()
 	if c.BJar.Cookies == nil {
 		c.BJar.Cookies = make(map[string]string)
 	}
@@ -37,6 +36,7 @@ func (c *httpClient) processCookies(resp *WebResp) {
 
 	if len(setCookies) == 0 {
 		resp.Cookies = c.BJar.GetCookieStr(false)
+		c.BJar.Unlock()
 		return
 	}
 
@@ -58,6 +58,7 @@ func (c *httpClient) processCookies(resp *WebResp) {
 		}
 	}
 	resp.Cookies = c.BJar.GetCookieStr(false)
+	c.BJar.Unlock()
 }
 
 // func (jar *cookieJar) ImportCookies(cookies string) {

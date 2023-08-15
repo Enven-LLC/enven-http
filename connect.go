@@ -6,9 +6,8 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
-	net "net"
+	"net"
 	"net/url"
 	"sync"
 	"time"
@@ -24,10 +23,12 @@ type directDialer struct {
 }
 
 func newDirectDialer(timeout time.Duration) proxy.ContextDialer {
+	_dialer := net.Dialer{
+		Timeout: timeout,
+	}
+
 	return &directDialer{
-		dialer: net.Dialer{
-			Timeout: timeout,
-		},
+		dialer: _dialer,
 	}
 }
 
@@ -37,20 +38,6 @@ func (d *directDialer) Dial(network, addr string) (net.Conn, error) {
 
 func (d *directDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	return d.dialer.DialContext(ctx, network, addr)
-}
-
-type socksContextDialer struct {
-	socksDialer proxy.Dialer
-}
-
-func newSocksContextDialer(socksDialer proxy.Dialer) socksContextDialer {
-	return socksContextDialer{
-		socksDialer: socksDialer,
-	}
-}
-
-func (s *socksContextDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return s.socksDialer.Dial(network, address)
 }
 
 // Copyright 2018 Google Inc.
@@ -109,19 +96,18 @@ func newConnectDialer(proxyUrlStr string, timeout time.Duration) (proxy.ContextD
 		if proxyUrl.Port() == "" {
 			proxyUrl.Host = net.JoinHostPort(proxyUrl.Host, "443")
 		}
-	case "socks5":
-		return handleSocks5ProxyDialer(proxyUrl)
 	case "":
 		return nil, errors.New("specify scheme explicitly (https://)")
 	default:
 		return nil, errors.New("scheme " + proxyUrl.Scheme + " is not supported")
 	}
+	_dialer := net.Dialer{
+		Timeout: timeout,
+	}
 
 	dialer := &connectDialer{
-		ProxyUrl: *proxyUrl,
-		Dialer: net.Dialer{
-			Timeout: timeout,
-		},
+		ProxyUrl:          *proxyUrl,
+		Dialer:            _dialer,
 		Timeout:           timeout,
 		DefaultHeader:     make(http.Header),
 		EnableH2ConnReuse: true,
@@ -135,28 +121,6 @@ func newConnectDialer(proxyUrlStr string, timeout time.Duration) (proxy.ContextD
 		}
 	}
 	return dialer, nil
-}
-
-func handleSocks5ProxyDialer(proxyUrl *url.URL) (proxy.ContextDialer, error) {
-	var proxyAuth *proxy.Auth
-	if proxyUrl.User != nil {
-		password, _ := proxyUrl.User.Password()
-		proxyAuth = &proxy.Auth{
-			User:     proxyUrl.User.Username(),
-			Password: password,
-		}
-	} else {
-		proxyAuth = nil
-	}
-
-	socksDialer, err := proxy.SOCKS5("tcp", proxyUrl.Host, proxyAuth, proxy.Direct)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create socks5 proxy: %w", err)
-	}
-
-	scd := newSocksContextDialer(socksDialer)
-
-	return &scd, nil
 }
 
 func (c *connectDialer) Dial(network, address string) (net.Conn, error) {

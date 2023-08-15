@@ -5,50 +5,44 @@ import (
 	tls "github.com/bogdanfinn/utls"
 )
 
-var DefaultClientProfile = Chrome_110
+var DefaultClientProfile = Chrome_112
 
 var MappedTLSClients = map[string]ClientProfile{
-	"chrome_103":             Chrome_103,
-	"chrome_104":             Chrome_104,
-	"chrome_105":             Chrome_105,
-	"chrome_106":             Chrome_106,
-	"chrome_107":             Chrome_107,
-	"chrome_108":             Chrome_108,
-	"chrome_109":             Chrome_109,
-	"chrome_110":             Chrome_110,
-	"chrome_111":             Chrome_111,
-	"chrome_112":             Chrome_112,
-	"safari_15_6_1":          Safari_15_6_1,
-	"safari_16_0":            Safari_16_0,
-	"safari_ipad_15_6":       Safari_Ipad_15_6,
-	"safari_ios_15_5":        Safari_IOS_15_5,
-	"safari_ios_15_6":        Safari_IOS_15_6,
-	"safari_ios_16_0":        Safari_IOS_16_0,
-	"firefox_102":            Firefox_102,
-	"firefox_104":            Firefox_104,
-	"firefox_105":            Firefox_105,
-	"firefox_106":            Firefox_106,
-	"firefox_108":            Firefox_108,
-	"firefox_110":            Firefox_110,
-	"opera_89":               Opera_89,
-	"opera_90":               Opera_90,
-	"opera_91":               Opera_91,
-	"zalando_android_mobile": ZalandoAndroidMobile,
-	"zalando_ios_mobile":     ZalandoIosMobile,
-	"nike_ios_mobile":        NikeIosMobile,
-	"nike_android_mobile":    NikeAndroidMobile,
-	"cloudscraper":           CloudflareCustom,
-	"mms_ios":                MMSIos,
+	"chrome_103":       Chrome_103,
+	"chrome_104":       Chrome_104,
+	"chrome_105":       Chrome_105,
+	"chrome_106":       Chrome_106,
+	"chrome_107":       Chrome_107,
+	"chrome_108":       Chrome_108,
+	"chrome_109":       Chrome_109,
+	"chrome_110":       Chrome_110,
+	"chrome_111":       Chrome_111,
+	"chrome_112":       Chrome_112,
+	"safari_15_6_1":    Safari_15_6_1,
+	"safari_16_0":      Safari_16_0,
+	"safari_ipad_15_6": Safari_Ipad_15_6,
+	"safari_ios_15_5":  Safari_IOS_15_5,
+	"safari_ios_15_6":  Safari_IOS_15_6,
+	"safari_ios_16_0":  Safari_IOS_16_0,
+	"firefox_102":      Firefox_102,
+	"firefox_104":      Firefox_104,
+	"firefox_105":      Firefox_105,
+	"firefox_106":      Firefox_106,
+	"firefox_108":      Firefox_108,
+	"firefox_110":      Firefox_110,
+	"opera_89":         Opera_89,
+	"opera_90":         Opera_90,
+	"opera_91":         Opera_91,
 }
 
 type ClientProfile struct {
 	clientHelloId     tls.ClientHelloID
+	connectionFlow    uint32
+	headerPriority    *http2.PriorityParam
+	priorities        []http2.Priority
+	pseudoHeaderOrder []string
 	settings          map[http2.SettingID]uint32
 	settingsOrder     []http2.SettingID
-	pseudoHeaderOrder []string
-	connectionFlow    uint32
-	priorities        []http2.Priority
-	headerPriority    *http2.PriorityParam
 }
 
 func NewClientProfile(clientHelloId tls.ClientHelloID, settings map[http2.SettingID]uint32, settingsOrder []http2.SettingID, pseudoHeaderOrder []string, connectionFlow uint32, priorities []http2.Priority, headerPriority *http2.PriorityParam) ClientProfile {

@@ -1,6 +1,7 @@
 package tls_client
 
 import (
+	"crypto/x509"
 	"time"
 
 	http "github.com/bogdanfinn/fhttp"
@@ -17,11 +18,18 @@ type TransportOptions struct {
 	MaxResponseHeaderBytes int64 // Zero means to use a default limit.
 	WriteBufferSize        int   // If zero, a default (currently 4KB) is used.
 	ReadBufferSize         int   // If zero, a default (currently 4KB) is used.
+	// IdleConnTimeout is the maximum amount of time an idle (keep-alive)
+	// connection will remain idle before closing itself. Zero means no limit.
+	IdleConnTimeout *time.Duration
+	// RootCAs is the set of root certificate authorities used to verify
+	// the remote server's certificate.
+	RootCAs *x509.CertPool
 }
 
 type BadPinHandlerFunc func(req *http.Request)
 
 type httpClientConfig struct {
+	catchPanics                 bool
 	debug                       bool
 	followRedirects             bool
 	customRedirectFunc          func(req *http.Request, via []*http.Request) error
@@ -37,6 +45,8 @@ type httpClientConfig struct {
 	withRandomTlsExtensionOrder bool
 	forceHttp1                  bool
 	timeout                     time.Duration
+	// Establish a connection to origin server via ipv4 only
+	disableIPV6 bool
 }
 
 // WithProxyUrl configures a HTTP client to use the specified proxy URL.
@@ -136,6 +146,13 @@ func WithDebug() HttpClientOption {
 	}
 }
 
+// WithCatchPanics configures a client to catch all go panics happening during a request and not print the stacktrace.
+func WithCatchPanics() HttpClientOption {
+	return func(config *httpClientConfig) {
+		config.catchPanics = true
+	}
+}
+
 // WithTransportOptions configures a client to use the specified transport options.
 func WithTransportOptions(transportOptions *TransportOptions) HttpClientOption {
 	return func(config *httpClientConfig) {
@@ -165,8 +182,16 @@ func WithClientProfile(clientProfile ClientProfile) HttpClientOption {
 }
 
 // WithServerNameOverwrite configures a TLS client to overwrite the server name being used for certificate verification and in the client hello.
+// This option does only work properly if WithInsecureSkipVerify is set to true in addition
 func WithServerNameOverwrite(serverName string) HttpClientOption {
 	return func(config *httpClientConfig) {
 		config.serverNameOverwrite = serverName
+	}
+}
+
+// WithDisableIPV6 configures a dialer to use tcp4 network argument
+func WithDisableIPV6() HttpClientOption {
+	return func(config *httpClientConfig) {
+		config.disableIPV6 = true
 	}
 }
