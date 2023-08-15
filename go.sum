@@ -1,3 +1,5 @@
+github.com/Enven-LLC/fhttp v0.0.0-20230815031223-d4b5ff7b32ff h1:qeImh6MGQ1iGXAL22GWogV90hydCaSmTJliujN+hJtg=
+github.com/Enven-LLC/fhttp v0.0.0-20230815031223-d4b5ff7b32ff/go.mod h1:nC0/skjd26V4Ipy60Mto/MBO6NMMNVa9toeqzn0fgU8=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/bogdanfinn/fhttp v0.5.23 h1:4Xb5OjYArB8GpnUw4A4r5jmt8UW0/Cvey3R9nS2dC9U=

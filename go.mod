@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/Enven-LLC/fhttp v0.0.0-20230815031223-d4b5ff7b32ff // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
