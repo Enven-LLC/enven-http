@@ -18,7 +18,7 @@ func NewBetterJar() *BetterJar {
 	}
 }
 
-func (bj *BetterJar) setCookies(cookieString string) {
+func (bj *BetterJar) SetCookies(cookieString string) {
 	cookies := strings.Split(cookieString, ";")
 	for _, cookie := range cookies {
 		nameI := strings.Index(cookie, "=")
@@ -49,7 +49,7 @@ func (c *httpClient) processCookies(resp *WebResp) {
 		return
 	}
 	for _, cookie := range setCookies {
-		c.BJar.setCookies(cookie)
+		c.BJar.SetCookies(cookie)
 	}
 	resp.Cookies = c.BJar.GetCookieStr(false)
 	c.BJar.Unlock()
