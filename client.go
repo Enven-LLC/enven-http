@@ -278,6 +278,10 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Response:         req.Response,
 	}
 
+	// if c.BJar != nil {
+	// 	// * Use better jar
+	// 	c.processCookies(webResp)
+	// }
 	resp, err := c.Client.Do(reqq)
 
 	if err != nil {
@@ -300,14 +304,11 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Cookies2:      resp.Cookies(),
 	}
 
-	// c.processCookies(webResp)
-
 	if c.Jar != nil {
 		cookies := c.Jar.Cookies(reqq.URL)
 		cookieStr := ""
 		for _, cook := range cookies {
-			c.logger.Debug("cookie: %s", cook.String())
-
+			// c.logger.Debug("cookie: %s", cook.String())
 			if cook.Name != "" && cook.Value != "" && cook.Value != `""` && cook.Value != "undefined" {
 				cookieStr += cook.Name + "=" + cook.Value + "; "
 			}

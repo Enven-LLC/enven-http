@@ -12,18 +12,31 @@ type BetterJar struct {
 	// GetCookieStr() string
 }
 
-func NewBetterJar() *BetterJar {
-	return &BetterJar{
+func NewBetterJar(cookies string) *BetterJar {
+	bj := &BetterJar{
 		Cookies: make(map[string]string),
 	}
+	if cookies != "" {
+		bj.setCookies(cookies)
+	}
+	return bj
 }
 
-// type betterJar struct {
-// 	jar     *BetterJar
-// 	cookies map[string]string
-// 	sync.RWMutex
-// }
+func (bj *BetterJar) setCookies(cookieString string) {
+	cookies := strings.Split(cookieString, ";")
+	for _, cookie := range cookies {
+		nameI := strings.Index(cookie, "=")
+		if nameI == -1 {
+			continue
+		}
+		name := strings.TrimSpace(cookie[:nameI])
+		value := strings.TrimSpace(cookie[nameI+1:])
 
+		if shouldProcessCookie(name, value) {
+			bj.Cookies[name] = value
+		}
+	}
+}
 func (c *httpClient) processCookies(resp *WebResp) {
 	c.BJar.Lock()
 	if c.BJar.Cookies == nil {
@@ -39,46 +52,13 @@ func (c *httpClient) processCookies(resp *WebResp) {
 		c.BJar.Unlock()
 		return
 	}
-
-	for _, cook := range setCookies {
-		parts := strings.Split(cook, ";")
-
-		cookie := parts[0]
-		nameI := strings.Index(cookie, "=")
-		if nameI == -1 {
-			continue
-		}
-		name := strings.TrimSpace(cookie[:nameI])
-		value := strings.TrimSpace(cookie[nameI+1:])
-
-		c.logger.Debug("cookie: %s, value: %s", name, value)
-
-		if name != "" && value != "" && value != `""` && value != "undefined" {
-			c.BJar.Cookies[name] = value
-		}
+	for _, cookie := range setCookies {
+		c.BJar.setCookies(cookie)
 	}
 	resp.Cookies = c.BJar.GetCookieStr(false)
 	c.BJar.Unlock()
 }
 
-// func (jar *cookieJar) ImportCookies(cookies string) {
-// 	if jar.Cookies == nil {
-// 		jar.Cookies = make(map[string]string)
-// 	}
-// 	parts := strings.Split(cookies, ";")
-// 	for _, cookie := range parts {
-// 		nameI := strings.Index(cookie, "=")
-// 		if nameI == -1 {
-// 			continue
-// 		}
-// 		name := strings.TrimSpace(cookie[:nameI])
-// 		value := strings.TrimSpace(cookie[nameI+1:])
-
-//			if value != "" && value != `""` {
-//				jar.Cookies[name] = value
-//			}
-//		}
-//	}
 func (jar *BetterJar) GetCookieStr(lock bool) string {
 	if lock {
 		jar.Lock()
@@ -86,11 +66,14 @@ func (jar *BetterJar) GetCookieStr(lock bool) string {
 	}
 	cookies := ""
 	for name, value := range jar.Cookies {
-		if value != "" && value != `""` {
+		if shouldProcessCookie(name, value) {
 			cookies += name + "=" + value + "; "
 		}
 	}
 	return strings.TrimSpace(cookies)
+}
+func shouldProcessCookie(name, value string) bool {
+	return name != "" && value != "" && value != `""` && value != "undefined"
 }
 
 // func (jar *cookieJar) GetCookie(find string) string {
