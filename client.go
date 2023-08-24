@@ -23,6 +23,7 @@ type HttpClient interface {
 	SetCookies(u *url.URL, cookies []*http.Cookie)
 	SetCookieJar(jar http.CookieJar)
 	GetCookieJar() http.CookieJar
+	SetBJCookies(cookies string)
 	SetProxy(proxyUrl string) error
 	GetProxy() string
 	SetFollowRedirect(followRedirect bool)
@@ -220,6 +221,11 @@ func (c *httpClient) applyProxy() error {
 	c.Transport = transport
 
 	return nil
+}
+func (c *httpClient) SetBJCookies(cookies string) {
+	if c.BJar != nil {
+		c.BJar.setCookies(cookies)
+	}
 }
 
 // GetCookies returns the cookies in the client's cookie jar for a given URL.

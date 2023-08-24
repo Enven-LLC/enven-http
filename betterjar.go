@@ -12,14 +12,10 @@ type BetterJar struct {
 	// GetCookieStr() string
 }
 
-func NewBetterJar(cookies string) *BetterJar {
-	bj := &BetterJar{
+func NewBetterJar() *BetterJar {
+	return &BetterJar{
 		Cookies: make(map[string]string),
 	}
-	if cookies != "" {
-		bj.setCookies(cookies)
-	}
-	return bj
 }
 
 func (bj *BetterJar) setCookies(cookieString string) {
