@@ -12,6 +12,7 @@ import (
 )
 
 type WebReq struct {
+	BJar *BetterJar
 	// NoDecodeBody bool
 	// Method specifies the HTTP method (GET, POST, PUT, etc.).
 	// For client requests, an empty string means GET.
@@ -245,8 +246,7 @@ type WebResp struct {
 	ProtoMajor int    // e.g. 1
 	ProtoMinor int    // e.g. 0
 
-	Cookies  string
-	Cookies2 []*http.Cookie
+	Cookies string
 	// Header maps header keys to Values. If the response had multiple
 	// headers with the same Key, they may be concatenated, with comma
 	// delimiters.  (RFC 7230, section 3.2.2 requires that multiple headers

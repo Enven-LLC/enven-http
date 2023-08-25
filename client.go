@@ -283,8 +283,8 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Response:         req.Response,
 	}
 
-	if c.BJar != nil {
-		reqq.Header.Set("cookie", c.BJar.GetCookieStr(false))
+	if req.BJar != nil {
+		reqq.Header.Set("cookie", req.BJar.GetCookies())
 	}
 	resp, err := c.Client.Do(reqq)
 
@@ -305,7 +305,11 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Trailer:       resp.Trailer,
 		Request:       resp.Request, // ? should this be reqq
 		TLS:           resp.TLS,
-		Cookies2:      resp.Cookies(),
+		// Cookies2:      resp.Cookies(),
+	}
+	if req.BJar != nil {
+		req.BJar.processCookies(webResp)
+		// reqq.Header.Set("cookie", req.BJar.GetCookies())
 	}
 
 	if c.Jar != nil {
@@ -320,7 +324,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		webResp.Cookies = strings.TrimSuffix(cookieStr, "; ")
 	} else if c.BJar != nil {
 		// * Use better jar
-		c.processCookies(webResp)
+		// c.processCookies(webResp)
 	}
 
 	if resp.Body != nil {
