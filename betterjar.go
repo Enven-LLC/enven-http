@@ -77,7 +77,7 @@ func (bj *BetterJar) GetCookies() string {
 	cookies := ""
 	for name, value := range bj.cookies {
 		if shouldProcessCookie(name, value) {
-			cookies += name + "=" + value + "; "
+			cookies += name + "=" + value + ";"
 		}
 	}
 	bj.mu.RUnlock()
