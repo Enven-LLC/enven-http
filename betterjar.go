@@ -1,6 +1,7 @@
 package tls_client
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -48,8 +49,58 @@ func (c *httpClient) processCookies(resp *WebResp) {
 		c.BJar.Unlock()
 		return
 	}
-	for _, cookie := range setCookies {
-		c.BJar.SetCookies(cookie)
+	resp.Request.Cookies()
+	// for _, cook := range setCookies {
+	// 	parts := strings.Split(cook, ";")
+
+	// 	cookie := parts[0]
+	// 	nameI := strings.Index(cookie, "=")
+	// 	if nameI == -1 {
+	// 		continue
+	// 	}
+	// 	name := strings.TrimSpace(cookie[:nameI])
+	// 	value := strings.TrimSpace(cookie[nameI+1:])
+
+	// 	c.logger.Debug("cookie: %s, value: %s", name, value)
+
+	// 	if name != "" && value != "" && value != `""` && value != "undefined" {
+	// 		c.BJar.Cookies[name] = value
+	// 	}
+	// }
+	for _, setCookie := range setCookies {
+
+		fmt.Println("set-cookie", setCookie)
+		//handle if multiple cookies are set in one set-cookie header
+		setSplit := strings.Split(setCookie, ",")
+		for _, cookie := range setSplit {
+			// Split the cookie string into attributes
+			cookieAttributes := strings.Split(cookie, ";")
+
+			// Parse and process each attribute
+			var name, value string
+			for _, attr := range cookieAttributes {
+				attr = strings.TrimSpace(attr)
+				parts := strings.SplitN(attr, "=", 2)
+				if len(parts) != 2 {
+					continue
+				}
+				key, val := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+
+				switch key {
+				case "Path":
+				case "Domain":
+				case "Expires":
+				default:
+					name = key
+					value = val
+					if shouldProcessCookie(name, value) {
+						c.BJar.Cookies[name] = value
+					}
+				}
+			}
+		}
+
+		// c.BJar.SetCookies(cookie)
 	}
 	resp.Cookies = c.BJar.GetCookieStr(false)
 	c.BJar.Unlock()
