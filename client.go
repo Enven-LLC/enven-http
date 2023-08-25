@@ -283,10 +283,9 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Response:         req.Response,
 	}
 
-	// if c.BJar != nil {
-	// 	// * Use better jar
-	// 	c.processCookies(webResp)
-	// }
+	if c.BJar != nil {
+		reqq.Header.Set("cookie", c.BJar.GetCookieStr(false))
+	}
 	resp, err := c.Client.Do(reqq)
 
 	if err != nil {
