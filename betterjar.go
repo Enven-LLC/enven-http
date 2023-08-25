@@ -1,6 +1,7 @@
 package tls_client
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -50,32 +51,30 @@ func (bj *BetterJar) processCookies(resp *WebResp) {
 	bj.mu.Lock()
 	for _, setCookie := range setCookies {
 		//handle if multiple cookies are set in one set-cookie header
-		setSplit := strings.Split(setCookie, ",")
-		for _, cookie := range setSplit {
-			// Split the cookie string into attributes
-			cookieAttributes := strings.Split(cookie, ";")
+		// Split the cookie string into attributes
+		cookieAttributes := strings.Split(setCookie, ";")
 
-			// Parse and process each attribute
-			var name, value string
-			for _, attr := range cookieAttributes {
-				attr = strings.TrimSpace(attr)
-				parts := strings.SplitN(attr, "=", 2)
-				if len(parts) != 2 {
-					continue
+		// Parse and process each attribute
+		var found = false
+		for _, attr := range cookieAttributes {
+			if found {
+				break
+			}
+			attr = strings.TrimSpace(attr)
+			parts := strings.SplitN(attr, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			name, value := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+			fmt.Println(name, value)
+			switch strings.ToLower(name) {
+			case "path", "domain", "expires":
+				continue
+			default:
+				if shouldProcessCookie(name, value) {
+					bj.cookies[name] = value
 				}
-				key, val := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
-
-				switch key {
-				case "Path":
-				case "Domain":
-				case "Expires":
-				default:
-					name = key
-					value = val
-					if shouldProcessCookie(name, value) {
-						bj.cookies[name] = value
-					}
-				}
+				found = true
 			}
 		}
 	}
