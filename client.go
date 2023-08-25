@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -18,8 +17,8 @@ var defaultRedirectFunc = func(req *http.Request, via []*http.Request) error {
 }
 
 type HttpClient interface {
-	GetCookies(u *url.URL) []*http.Cookie
-	SetCookies(u *url.URL, cookies []*http.Cookie)
+	// GetCookies(u *url.URL) []*http.Cookie
+	// SetCookies(u *url.URL, cookies []*http.Cookie)
 	SetCookieJar(jar http.CookieJar)
 	GetCookieJar() http.CookieJar
 
@@ -224,24 +223,24 @@ func (c *httpClient) applyProxy() error {
 }
 
 // GetCookies returns the cookies in the client's cookie jar for a given URL.
-func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
-	if c.Jar == nil {
-		c.logger.Warn("you did not setup a cookie jar")
-		return nil
-	}
+// func (c *httpClient) GetCookies(u *url.URL) []*http.Cookie {
+// 	if c.Jar == nil {
+// 		c.logger.Warn("you did not setup a cookie jar")
+// 		return nil
+// 	}
 
-	return c.Jar.Cookies(u)
-}
+// 	return c.Jar.Cookies(u)
+// }
 
-func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
+// func (c *httpClient) SetCookies(u *url.URL, cookies []*http.Cookie) {
 
-	if c.Jar == nil {
-		c.logger.Warn("you did not setup a cookie jar")
-		return
-	}
+// 	if c.Jar == nil {
+// 		c.logger.Warn("you did not setup a cookie jar")
+// 		return
+// 	}
 
-	c.Jar.SetCookies(u, cookies)
-}
+//		c.Jar.SetCookies(u, cookies)
+//	}
 func (c *httpClient) SetBJar(jar *BetterJar) {
 	c.BJar = jar
 }

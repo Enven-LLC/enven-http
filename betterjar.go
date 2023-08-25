@@ -39,8 +39,6 @@ func (bj *BetterJar) processCookies(resp *WebResp) {
 	// if c.BJar.Cookies == nil {
 	// 	c.BJar.Cookies = make(map[string]string)
 	// }
-	resp.Header.Get("Set-Cookie")
-
 	setCookies := resp.Header.Values("Set-Cookie")
 	// c.logger.Debug("set cookies from response header: %s", setCookies)
 
