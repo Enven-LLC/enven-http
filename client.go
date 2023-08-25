@@ -1,7 +1,6 @@
 package tls_client
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -309,10 +308,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 	}
 	if req.BJar != nil {
 		req.BJar.processCookies(webResp)
-		// reqq.Header.Set("cookie", req.BJar.GetCookies())
-	}
-
-	if c.Jar != nil {
+	} else if c.Jar != nil {
 		cookies := c.Jar.Cookies(reqq.URL)
 		cookieStr := ""
 		for _, cook := range cookies {
@@ -333,8 +329,8 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 			resp.Body.Close()
 			return nil, err
 		}
-		responseBody := io.NopCloser(bytes.NewBuffer(buf))
-		resp.Body = responseBody
+		// responseBody := io.NopCloser(bytes.NewBuffer(buf))
+		// resp.Body = responseBody
 		webResp.Body = string(buf)
 		webResp.BodyBytes = buf
 		resp.Body.Close()

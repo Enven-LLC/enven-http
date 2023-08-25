@@ -5,16 +5,15 @@ import (
 	"sync"
 )
 
-// TODO: consider adding an easy way to support multiple domains nicely, unlike the ugly ass default cookiejar
 type BetterJar struct {
-	Cookies map[string]string
+	cookies map[string]string
 	mu      sync.RWMutex
 	// GetCookieStr() string
 }
 
 func NewBetterJar() *BetterJar {
 	return &BetterJar{
-		Cookies: make(map[string]string),
+		cookies: make(map[string]string),
 	}
 }
 
@@ -30,7 +29,7 @@ func (bj *BetterJar) SetCookies(cookieString string) {
 		value := strings.TrimSpace(cookie[nameI+1:])
 
 		if shouldProcessCookie(name, value) {
-			bj.Cookies[name] = value
+			bj.cookies[name] = value
 		}
 	}
 	bj.mu.Unlock()
@@ -76,7 +75,7 @@ func (bj *BetterJar) processCookies(resp *WebResp) {
 					name = key
 					value = val
 					if shouldProcessCookie(name, value) {
-						bj.Cookies[name] = value
+						bj.cookies[name] = value
 					}
 				}
 			}
@@ -95,7 +94,7 @@ func (bj *BetterJar) GetCookies() string {
 	// }
 	bj.mu.RLock()
 	cookies := ""
-	for name, value := range bj.Cookies {
+	for name, value := range bj.cookies {
 		if shouldProcessCookie(name, value) {
 			cookies += name + "=" + value + "; "
 		}
