@@ -1,7 +1,6 @@
 package tls_client
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 )
@@ -9,7 +8,6 @@ import (
 type BetterJar struct {
 	cookies map[string]string
 	mu      sync.RWMutex
-	// GetCookieStr() string
 }
 
 func NewBetterJar() *BetterJar {
@@ -36,22 +34,15 @@ func (bj *BetterJar) SetCookies(cookieString string) {
 	bj.mu.Unlock()
 }
 func (bj *BetterJar) processCookies(resp *WebResp) {
-	// c.BJar.Lock()
-	// if c.BJar.Cookies == nil {
-	// 	c.BJar.Cookies = make(map[string]string)
-	// }
 	setCookies := resp.Header.Values("Set-Cookie")
 	// c.logger.Debug("set cookies from response header: %s", setCookies)
 
 	if len(setCookies) == 0 {
 		resp.Cookies = bj.GetCookies()
-		// bjar.Unlock()
 		return
 	}
 	bj.mu.Lock()
 	for _, setCookie := range setCookies {
-		//handle if multiple cookies are set in one set-cookie header
-		// Split the cookie string into attributes
 		cookieAttributes := strings.Split(setCookie, ";")
 
 		// Parse and process each attribute
@@ -66,7 +57,6 @@ func (bj *BetterJar) processCookies(resp *WebResp) {
 				continue
 			}
 			name, value := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
-			fmt.Println(name, value)
 			switch strings.ToLower(name) {
 			case "path", "domain", "expires":
 				continue
@@ -80,15 +70,9 @@ func (bj *BetterJar) processCookies(resp *WebResp) {
 	}
 	bj.mu.Unlock()
 	resp.Cookies = bj.GetCookies()
-	// c.BJar.Unlock()
-	// resp.Cookies = c.BJar.GetCookies()
 }
 
 func (bj *BetterJar) GetCookies() string {
-	// if lock {
-	// 	jar.Lock()
-	// 	defer jar.Unlock()
-	// }
 	bj.mu.RLock()
 	cookies := ""
 	for name, value := range bj.cookies {
