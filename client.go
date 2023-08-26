@@ -287,6 +287,8 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 
 	if req.BJar != nil {
 		reqq.Header.Set("cookie", req.BJar.GetCookies())
+	} else if c.BJar != nil {
+		reqq.Header.Set("cookie", req.BJar.GetCookies())
 	}
 	resp, err := c.Client.Do(reqq)
 
