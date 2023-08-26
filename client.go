@@ -323,6 +323,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		webResp.Cookies = strings.TrimSuffix(cookieStr, "; ")
 	} else if c.BJar != nil {
 		// * Use client-level better jar
+		fmt.Println("yes")
 		c.BJar.processCookies(webResp)
 	}
 

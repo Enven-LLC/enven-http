@@ -1,6 +1,7 @@
 package tls_client
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -62,6 +63,7 @@ func (bj *BetterJar) processCookies(resp *WebResp) {
 				continue
 			default:
 				if shouldProcessCookie(name, value) {
+					fmt.Println("set cookie", name, value)
 					bj.cookies[name] = value
 				}
 				found = true
