@@ -318,8 +318,8 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		}
 		webResp.Cookies = strings.TrimSuffix(cookieStr, "; ")
 	} else if c.BJar != nil {
-		// * Use better jar
-		// c.processCookies(webResp)
+		// * Use client-level better jar
+		c.BJar.processCookies(webResp)
 	}
 
 	if resp.Body != nil {
@@ -328,8 +328,6 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 			resp.Body.Close()
 			return nil, err
 		}
-		// responseBody := io.NopCloser(bytes.NewBuffer(buf))
-		// resp.Body = responseBody
 		webResp.Body = string(buf)
 		webResp.BodyBytes = buf
 		resp.Body.Close()
