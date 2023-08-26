@@ -23,6 +23,7 @@ type HttpClient interface {
 	GetCookieJar() http.CookieJar
 
 	SetBJar(jar *BetterJar)
+	GetBJar() *BetterJar
 	SetProxy(proxyUrl string) error
 	GetProxy() string
 	SetFollowRedirect(followRedirect bool)
@@ -243,6 +244,9 @@ func (c *httpClient) applyProxy() error {
 //	}
 func (c *httpClient) SetBJar(jar *BetterJar) {
 	c.BJar = jar
+}
+func (c *httpClient) GetBJar() *BetterJar {
+	return c.BJar
 }
 
 // SetCookieJar sets a jar as the clients cookie jar. This is the recommended way when you want to "clear" the existing cookiejar
