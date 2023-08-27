@@ -294,7 +294,6 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		return &WebResp{StatusCode: -1}, err
 	}
 
-	fmt.Println(resp)
 	webResp := &WebResp{
 		Status:        resp.Status,
 		StatusCode:    resp.StatusCode,
@@ -306,9 +305,8 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Close:         resp.Close,
 		Uncompressed:  resp.Uncompressed,
 		Trailer:       resp.Trailer,
-		Request:       resp.Request, // ? should this be reqq
+		Request:       resp.Request,
 		TLS:           resp.TLS,
-		// Cookies2:      resp.Cookies(),
 	}
 	if req.BJar != nil {
 		req.BJar.processCookies(webResp)
@@ -324,7 +322,6 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		webResp.Cookies = strings.TrimSuffix(cookieStr, "; ")
 	} else if c.BJar != nil {
 		// * Use client-level better jar
-		fmt.Println("yes")
 		c.BJar.processCookies(webResp)
 	}
 
