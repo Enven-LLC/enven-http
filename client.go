@@ -17,8 +17,6 @@ var defaultRedirectFunc = func(req *http.Request, via []*http.Request) error {
 }
 
 type HttpClient interface {
-	// GetCookies(u *url.URL) []*http.Cookie
-	// SetCookies(u *url.URL, cookies []*http.Cookie)
 	SetCookieJar(jar http.CookieJar)
 	GetCookieJar() http.CookieJar
 
@@ -296,6 +294,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		return &WebResp{StatusCode: -1}, err
 	}
 
+	fmt.Println(resp)
 	webResp := &WebResp{
 		Status:        resp.Status,
 		StatusCode:    resp.StatusCode,
