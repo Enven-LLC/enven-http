@@ -334,7 +334,7 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		buf, err := io.ReadAll(resp.Body)
 		if err != nil {
 			resp.Body.Close()
-			return nil, err
+			return webResp, err
 		}
 		webResp.Body = string(buf)
 		webResp.BodyBytes = buf
