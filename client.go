@@ -283,16 +283,16 @@ func (c *httpClient) Do(req *WebReq) (*WebResp, error) {
 		Response:         req.Response,
 	}
 
-	jarCookies := ""
-	if req.BJar != nil {
-		jarCookies = req.BJar.GetCookies()
+	// jarCookies := ""
+	// if req.BJar != nil {
+	// 	jarCookies = req.BJar.GetCookies()
 
-	} else if c.BJar != nil {
-		jarCookies = c.BJar.GetCookies()
-	}
-	if jarCookies != "" {
-		reqq.Header.Set("cookie", jarCookies)
-	}
+	// } else if c.BJar != nil {
+	// 	jarCookies = c.BJar.GetCookies()
+	// }
+	// if jarCookies != "" {
+	// 	reqq.Header.Set("cookie", jarCookies)
+	// }
 	resp, err := c.Client.Do(reqq)
 
 	if err != nil {
